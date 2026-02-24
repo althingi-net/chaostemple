@@ -18,8 +18,8 @@ from django.template.defaultfilters import capfirst
 from django.urls import reverse
 from django.utils.translation import gettext as _
 
-from ics import Calendar
-from ics import Event
+from icalendar import Calendar
+from icalendar import Event
 
 
 def calendars(request):
@@ -62,9 +62,10 @@ def ical(request):
         committees = committees.filter(abbreviation_short__in=abbreviations)
 
     cal = Calendar()
-    cal.creator = "-//Alþingi//NONSGML Fastanefndir Alþingis//IS"
-    cal.scale = "GREGORIAN"
-    cal.method = "PUBLISH"
+    cal.add('prodid', '-//Alþingi//NONSGML Fastanefndir Alþingis//IS')
+    cal.add('version', '2.0')
+    cal.add('calscale', 'GREGORIAN')
+    cal.add('method', 'PUBLISH')
 
     agendas = (
         CommitteeAgenda.objects.select_related("committee")
@@ -89,29 +90,9 @@ def ical(request):
                 )
             description += "\n"
 
-        event = Event()
-        event.uid = "committee-agenda-%d@althingi.net" % agenda_id
-        event.name = capfirst(agenda.committee.name)
-        event.description = description
-        event.begin = agenda.timing_start_planned
-        event.end = agenda.timing_end
-        event.url = (
-            "https://www.althingi.is/thingnefndir/dagskra-nefndarfunda/?nfaerslunr=%d"
-            % agenda_id
-        )
-
-        # Committee agendas are never planned at midnight (or damn well
-        # hopefully not). So when a committee agenda is planned without a time
-        # factor, or in other words, is timed at midnight, we'll assume that
-        # the timing is actually not precisely determined and turn it into an
-        # all-day event instead, using the timing text (determined below) to
-        # elaborate instead.
-        if (
-            event.begin.hour == 0
-            and event.begin.minute == 0
-            and event.begin.second == 0
-        ):
-            event.make_all_day()
+        timing_start = agenda.timing_start_planned
+        timing_end = agenda.timing_end
+        event_name = capfirst(agenda.committee.name)
 
         if agenda.timing_text:
             # If agenda.timing_text is just a representation of what is
@@ -124,7 +105,7 @@ def ical(request):
             # meaningful than simply a (badly) reformatted version of
             # agenda.timing_start_planned.
 
-            timing = agenda.timing_start_planned
+            timing = timing_start
 
             day = timing.day
             month_name = ICELANDIC_MONTHS[timing.month]
@@ -143,12 +124,37 @@ def ical(request):
                 am_pm,
             )
             if agenda.timing_text.strip().replace("  ", " ") != timing_text_test:
-                event.name += " (%s)" % agenda.timing_text.strip()
+                event_name += " (%s)" % agenda.timing_text.strip()
 
-        cal.events.add(event)
+        event = Event()
+        event.add('uid', 'committee-agenda-%d@althingi.net' % agenda_id)
+        event.add('summary', event_name)
+        event.add('description', description)
+        event.add('url', 'https://www.althingi.is/thingnefndir/dagskra-nefndarfunda/?nfaerslunr=%d' % agenda_id)
+
+        # Committee agendas are never planned at midnight (or damn well
+        # hopefully not). So when a committee agenda is planned without a time
+        # factor, or in other words, is timed at midnight, we'll assume that
+        # the timing is actually not precisely determined and turn it into an
+        # all-day event instead, using the timing text (determined below) to
+        # elaborate instead.
+        if (
+            timing_start.hour == 0
+            and timing_start.minute == 0
+            and timing_start.second == 0
+        ):
+            event.add('dtstart', timing_start.date())
+            if timing_end:
+                event.add('dtend', timing_end.date())
+        else:
+            event.add('dtstart', timing_start)
+            if timing_end:
+                event.add('dtend', timing_end)
+
+        cal.add_component(event)
 
     ical_text = monkey_patch_ical(
-        cal.__str__(),
+        cal.to_ical().decode('utf-8'),
         "Fastanefndir Alþingis",
         "Dagatal sem inniheldur boðaða fundi fastanefnda Alþingis ásamt dagskrá í lýsingu.",
         "Reykjavik/Iceland",

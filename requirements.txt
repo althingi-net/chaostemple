@@ -7,7 +7,7 @@ dateutils
 markdown2
 lxml
 django-termsandconditions
-ics
+icalendar
 requests
 tabulate
 daphne
