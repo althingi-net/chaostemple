@@ -14,3 +14,4 @@ daphne
 whitenoise
 git+https://github.com/venomous/cloudscraper@3.0.0
 dateparser
+git+https://github.com/althingi-net/djalthingi

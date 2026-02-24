@@ -14,6 +14,7 @@ cryptography==46.0.5
 daphne==4.2.1
 dateparser==1.3.0
 dateutils==0.6.12
+djalthingi @ git+https://github.com/althingi-net/djalthingi@2a58f221e262d70a6df6756c89ffd7e5dbd2799a
 Django==6.0.2
 django-model-utils==5.0.0
 django-ninja==1.5.3
