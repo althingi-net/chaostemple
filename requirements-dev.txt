@@ -3,3 +3,4 @@ ipdb
 black
 django-stubs
 lxml-stubs
+-e ../djalthingi # Clone from: https://github.com/althingi-net/djalthingi
