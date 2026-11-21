@@ -15,3 +15,4 @@ local_settings.py
 /chaostemple/static
 /sql-changes
 /pip-selfcheck.json
+prompt.md
